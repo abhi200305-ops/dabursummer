@@ -994,10 +994,8 @@ async function recordVisitTx(shop, ssmName, brandsBilled, notes) {
     const scoreRef = db.collection('scores').doc(ssmName);
 
     // ---- ALL READS FIRST (Firestore requirement) ----
-    const [shopSnap, scoreSnap] = await Promise.all([
-      tx.get(shopRef),
-      tx.get(scoreRef),
-    ]);
+    const shopSnap  = await tx.get(shopRef);
+    const scoreSnap = await tx.get(scoreRef);
     if (!shopSnap.exists) throw new Error('Shop not found.');
     const fresh = shopSnap.data();
     const prev  = scoreSnap.exists ? scoreSnap.data()
