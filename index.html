@@ -133,9 +133,12 @@ section.view.active{display:block}
 .modal h2{margin:0 0 4px;color:var(--orange-d);font-size:18px}
 .modal .sub{color:var(--muted);font-size:13px;margin-bottom:12px}
 .brand-pick{display:flex;flex-direction:column;gap:6px;margin:10px 0 14px}
-.brand-pick label{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:14px}
+.brand-pick label{display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:14px}
 .brand-pick label.checked{background:#dcfce7;border-color:var(--green)}
 .brand-pick label.disabled{opacity:.55;cursor:not-allowed;background:#f7f7f7}
+.brand-pick .pcs-input{width:64px;padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;background:#fff}
+.brand-pick .pcs-label{font-size:11px;color:var(--muted);font-weight:600}
+.brand-pick label.disabled .pcs-input{background:#eee;color:var(--muted)}
 .brand-pick .tag-pri{background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.4px}
 .brand-pick .tag-cross{background:#dbeafe;color:#1e40af;padding:1px 7px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.4px}
 .brand-pick .new-flag{background:var(--green);color:#fff;padding:1px 7px;border-radius:5px;font-size:10px;font-weight:800}
@@ -987,10 +990,20 @@ async function saveVisit() {
 
 async function recordVisitTx(shop, ssmName, brandsBilled, notes) {
   return await db.runTransaction(async (tx) => {
-    const shopRef = db.collection('shops').doc(shop.id);
-    const shopSnap = await tx.get(shopRef);
+    const shopRef  = db.collection('shops').doc(shop.id);
+    const scoreRef = db.collection('scores').doc(ssmName);
+
+    // ---- ALL READS FIRST (Firestore requirement) ----
+    const [shopSnap, scoreSnap] = await Promise.all([
+      tx.get(shopRef),
+      tx.get(scoreRef),
+    ]);
     if (!shopSnap.exists) throw new Error('Shop not found.');
     const fresh = shopSnap.data();
+    const prev  = scoreSnap.exists ? scoreSnap.data()
+                : { total_pts:0, visits_count:0, dormants_activated:0, slippings_recovered:0, new_brands_added:0 };
+
+    // ---- COMPUTE ----
     const mtdNow = { ...(fresh.brands_mtd_now || fresh.brands_mtd_baseline || {}) };
     const servedMtdNow = Object.values(mtdNow).some(v => v > 0);
     const wasDormant  = !fresh.served_lm && !servedMtdNow;
@@ -1007,21 +1020,16 @@ async function recordVisitTx(shop, ssmName, brandsBilled, notes) {
       if (newToShop) { score.new_brands.push(b); score.new_brand_pts += state.points.new_brand; }
     }
     score.total = score.dormant_pts + score.slipping_pts + score.new_brand_pts;
-
-    // Update shop
     const newMtd = { ...mtdNow };
     for (const b of brandsBilled) newMtd[b] = (newMtd[b] || 0) + 1;
+
+    // ---- ALL WRITES AFTER ALL READS ----
     tx.update(shopRef, {
       brands_mtd_now: newMtd,
       served_mtd_now: true,
       last_visit_at: firebase.firestore.FieldValue.serverTimestamp(),
       last_visit_by: ssmName,
     });
-
-    // Update score
-    const scoreRef = db.collection('scores').doc(ssmName);
-    const scoreSnap = await tx.get(scoreRef);
-    const prev = scoreSnap.exists ? scoreSnap.data() : { total_pts:0, visits_count:0, dormants_activated:0, slippings_recovered:0, new_brands_added:0 };
     tx.set(scoreRef, {
       total_pts:           (prev.total_pts||0) + score.total,
       visits_count:        (prev.visits_count||0) + 1,
@@ -1030,8 +1038,6 @@ async function recordVisitTx(shop, ssmName, brandsBilled, notes) {
       new_brands_added:    (prev.new_brands_added||0) + score.new_brands.length,
       updated_at: firebase.firestore.FieldValue.serverTimestamp(),
     });
-
-    // Visit doc
     const vRef = db.collection('visits').doc();
     tx.set(vRef, {
       shop_id: shop.id, shop_name: shop.name,
