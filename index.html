@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dabur Beat Challenge · SSM Live Dashboard</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="assets/firebase-config.js"></script>
+<style>
+:root{
+  --bg:#fff7ed; --bg2:#fff1d6; --card:#ffffff; --ink:#1f2937; --muted:#6b7280;
+  --border:#fde6c2; --orange:#f97316; --orange-d:#ea580c;
+  --green:#16a34a; --green-d:#15803d; --red:#ef4444; --amber:#f59e0b;
+  --blue:#3b82f6; --purple:#8b5cf6;
+  --shadow:0 4px 14px rgba(234,88,12,.08);
+  --shadow-lg:0 10px 30px rgba(234,88,12,.15);
+  --bronze:#cd7f32; --silver:#aab2bd; --plat:#b4a7d6;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-height:100vh}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:14px}
+a{color:var(--orange-d)}
+
+header{background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow-lg);position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:10px}
+header .brand{display:flex;align-items:center;gap:12px;font-weight:700;font-size:18px}
+header .logo{width:40px;height:40px;border-radius:10px;background:#fff;color:var(--orange-d);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px}
+header .sub{font-size:11.5px;font-weight:500;opacity:.9}
+header .meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+header .pill{background:rgba(255,255,255,.18);padding:5px 11px;border-radius:999px;font-weight:700;font-size:12.5px}
+header .pill .v{color:#fff7ed}
+header .pill.gold{background:rgba(254,243,199,.95);color:#92400e}
+header .icon-btn{background:rgba(255,255,255,.2);border:none;color:#fff;font-weight:700;font-size:12.5px;padding:5px 11px;border-radius:999px}
+header .icon-btn:hover{background:rgba(255,255,255,.32)}
+
+nav.tabs{display:flex;gap:4px;padding:10px 22px 0;border-bottom:1px solid var(--border);background:transparent;overflow-x:auto}
+nav.tabs button{background:transparent;border:none;padding:10px 16px;font-size:14px;font-weight:600;color:var(--muted);border-radius:10px 10px 0 0;white-space:nowrap;display:flex;align-items:center;gap:6px}
+nav.tabs button:hover{color:var(--ink);background:rgba(249,115,22,.06)}
+nav.tabs button.active{color:var(--orange-d);background:var(--card);border:1px solid var(--border);border-bottom:1px solid var(--card);position:relative;top:1px}
+
+main{padding:18px 22px 60px;max-width:1400px;margin:0 auto}
+section.view{display:none;animation:fadeIn .2s ease}
+section.view.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card h3{margin:0 0 12px;font-size:15px;color:var(--orange-d);display:flex;align-items:center;gap:8px}
+.card .sub{color:var(--muted);font-size:13px;margin:-6px 0 12px}
+
+.row{display:grid;gap:10px}
+.row.cols-2{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.row.cols-3{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.row.cols-4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+
+.stat{background:linear-gradient(135deg,#fff,#fff8ed);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center}
+.stat .label{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;font-weight:700}
+.stat .value{font-size:28px;font-weight:900;color:var(--orange-d);margin-top:4px;line-height:1.1}
+.stat.green .value{color:var(--green-d)}
+.stat.red .value{color:var(--red)}
+.stat.blue .value{color:var(--blue)}
+.stat.purple .value{color:var(--purple)}
+
+/* Welcome / login card */
+.picker{max-width:460px;margin:36px auto;text-align:center;padding:32px 28px}
+.picker h1{margin:0 0 6px;font-size:24px;color:var(--orange-d)}
+.picker p{margin:0 0 20px;color:var(--muted);font-size:14px}
+.picker select, .picker input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:12px}
+.picker .btn{width:100%;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;border:none;padding:13px;border-radius:10px;font-weight:800;font-size:15px;margin-top:4px}
+.picker .btn:hover{filter:brightness(.95)}
+.picker .btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--border);font-weight:600;margin-top:18px}
+.picker .err{background:#fee2e2;color:#991b1b;padding:8px 10px;border-radius:8px;margin-top:8px;font-size:13px}
+
+/* Filter chips */
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.chip{background:#fef3c7;color:#92400e;padding:7px 13px;border-radius:999px;font-size:13px;font-weight:700;border:1px solid transparent}
+.chip:hover{background:#fde68a}
+.chip.active{background:var(--orange);color:#fff;border-color:var(--orange-d)}
+.chip .n{background:rgba(0,0,0,.12);padding:1px 7px;border-radius:8px;margin-left:6px;font-size:11px;color:inherit}
+.chip.active .n{background:rgba(255,255,255,.3);color:#fff}
+.search-box{flex:1;min-width:180px}
+.search-box input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:#fff}
+
+/* Shop cards */
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:10px}
+.shop{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow)}
+.shop.dormant{border-left:4px solid var(--red)}
+.shop.slipping{border-left:4px solid var(--amber)}
+.shop.rising{border-left:4px solid var(--blue)}
+.shop.ontrack{border-left:4px solid var(--green)}
+.shop .top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.shop .name{font-weight:700;color:var(--ink);font-size:14.5px;line-height:1.3}
+.shop .beat{font-size:11.5px;color:var(--muted)}
+.status{padding:3px 9px;border-radius:6px;font-size:11px;font-weight:800;letter-spacing:.4px;white-space:nowrap}
+.status.dormant{background:#fee2e2;color:#991b1b}
+.status.slipping{background:#fef3c7;color:#92400e}
+.status.rising{background:#dbeafe;color:#1e40af}
+.status.ontrack{background:#dcfce7;color:#166534}
+.shop .meta-row{display:flex;gap:10px;font-size:12px;color:var(--muted);align-items:center;flex-wrap:wrap}
+.meta-row .pts{background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:6px;font-weight:800}
+.brand-chips{display:flex;flex-wrap:wrap;gap:4px}
+.brand-chip{font-size:11px;padding:2px 7px;border-radius:6px;background:#f3f4f6;color:var(--muted);font-weight:600}
+.brand-chip.missing.priority{background:#fef3c7;color:#92400e}
+.brand-chip.missing{background:#fee2e2;color:#991b1b}
+.brand-chip.billed{background:#dcfce7;color:#166534;text-decoration:line-through;opacity:.7}
+
+.btn-visit{background:var(--green);color:#fff;border:none;padding:9px 14px;border-radius:8px;font-size:14px;font-weight:700}
+.btn-visit:hover{background:#15803d}
+.btn-primary{background:var(--green);color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:700}
+.btn-primary:disabled{background:#aab2bd}
+.btn-secondary{background:#f3f4f6;color:var(--ink);border:none;padding:10px 18px;border-radius:8px;font-weight:700}
+.btn-danger{background:#fee2e2;color:#991b1b;border:none;padding:8px 14px;border-radius:8px;font-weight:700}
+
+/* Modal */
+.mask{position:fixed;inset:0;background:rgba(31,41,55,.55);opacity:0;pointer-events:none;transition:opacity .15s;z-index:200}
+.mask.open{opacity:1;pointer-events:auto}
+.modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:12px;z-index:201;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s, visibility 0s linear .15s}
+.modal.open{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .15s, visibility 0s linear 0s}
+.modal .box{background:#fff;border-radius:14px;padding:20px 22px;max-width:540px;width:100%;max-height:86vh;overflow-y:auto;box-shadow:0 12px 40px rgba(31,41,55,.3);transform:translateY(20px);transition:transform .15s}
+.modal.open .box{transform:translateY(0)}
+.modal h2{margin:0 0 4px;color:var(--orange-d);font-size:18px}
+.modal .sub{color:var(--muted);font-size:13px;margin-bottom:12px}
+.brand-pick{display:flex;flex-direction:column;gap:6px;margin:10px 0 14px}
+.brand-pick label{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:14px}
+.brand-pick label.checked{background:#dcfce7;border-color:var(--green)}
+.brand-pick label.disabled{opacity:.55;cursor:not-allowed;background:#f7f7f7}
+.brand-pick .tag-pri{background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.4px}
+.brand-pick .tag-cross{background:#dbeafe;color:#1e40af;padding:1px 7px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.4px}
+.brand-pick .new-flag{background:var(--green);color:#fff;padding:1px 7px;border-radius:5px;font-size:10px;font-weight:800}
+.modal textarea{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;min-height:60px;resize:vertical}
+.modal .actions{display:flex;gap:10px;margin-top:14px;justify-content:flex-end}
+
+/* Tier badges */
+.tier{padding:4px 11px;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:.4px;color:#fff;display:inline-block}
+.tier.bronze{background:var(--bronze)}
+.tier.silver{background:var(--silver);color:#2a2a2a}
+.tier.gold{background:#f59e0b;color:#4a3500}
+.tier.plat{background:var(--plat);color:#2a2240}
+.tier.none{background:#d1d5db;color:#4b5563}
+
+/* Table */
+table.dt{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px}
+table.dt th{text-align:left;padding:10px 8px;background:#fef3c7;color:#92400e;font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--border);white-space:nowrap}
+table.dt td{padding:9px 8px;border-bottom:1px solid #f3f4f6}
+table.dt tr:hover td{background:#fff8ed}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.bar{background:#f3f4f6;border-radius:6px;height:8px;overflow:hidden;min-width:80px}
+.bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--orange),var(--orange-d));border-radius:6px}
+.bar-row{display:flex;align-items:center;gap:8px}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(40px);opacity:0;background:var(--ink);color:#fff;padding:13px 22px;border-radius:10px;box-shadow:0 12px 40px rgba(31,41,55,.3);z-index:300;font-weight:700;max-width:90vw;transition:opacity .2s,transform .2s}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success{background:var(--green-d)}
+.toast.error{background:#991b1b}
+.toast .pts{color:#fbbf24;font-weight:900;font-size:17px}
+
+/* Upload */
+.upload-card{background:#fff;border:2px dashed var(--border);border-radius:12px;padding:24px;text-align:center}
+.upload-card.dragging{background:#dcfce7;border-color:var(--green)}
+.upload-card label.file-btn{display:inline-block;background:var(--orange-d);color:#fff;padding:10px 18px;border-radius:8px;font-weight:700;cursor:pointer;margin-top:10px}
+.upload-card input[type=file]{display:none}
+.upload-card .status{margin-top:12px;font-size:13px;color:var(--muted)}
+
+.feed{max-height:360px;overflow-y:auto}
+.feed .visit{padding:10px 12px;border-bottom:1px solid #f3f4f6;display:flex;gap:10px;align-items:center}
+.feed .badge{background:#fef3c7;color:#92400e;padding:3px 8px;border-radius:6px;font-weight:800;font-size:12px;min-width:50px;text-align:center}
+.feed .meta{flex:1;font-size:13px}
+.feed .meta b{color:var(--orange-d)}
+.feed .meta .small{font-size:11.5px;color:var(--muted)}
+
+.muted{color:var(--muted)}
+.banner-warn{background:#fef3c7;color:#92400e;padding:10px 14px;border:1px solid #fcd34d;border-radius:10px;margin-bottom:14px;font-size:13px}
+
+@media(max-width:640px){
+  header{padding:12px 14px}
+  header .brand{font-size:15px}
+  header .logo{width:36px;height:36px;font-size:18px}
+  nav.tabs{padding:8px 8px 0}
+  nav.tabs button{padding:8px 12px;font-size:13px}
+  main{padding:14px 12px 60px}
+  .shop-grid{grid-template-columns:1fr}
+  .stat .value{font-size:22px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo">D</div>
+    <div>
+      <div>Dabur Beat Challenge</div>
+      <div class="sub">SUNSHINE TRADERS · Delhi · Live SSM tracker</div>
+    </div>
+  </div>
+  <div class="meta">
+    <span class="pill" id="hdrCloud" title="Cloud sync status">☁️ Connecting…</span>
+    <span class="pill gold" id="hdrPoints" style="display:none">⭐ <span class="v" id="hdrPtsVal">0</span></span>
+    <span class="tier none" id="hdrTier" style="display:none">— NOT STARTED</span>
+    <span class="pill" id="hdrUser">Sign in to begin →</span>
+    <button class="icon-btn" id="hdrLogout" style="display:none" onclick="logout()">🚪 Sign out</button>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs" style="display:none"></nav>
+
+<main>
+
+<!-- ====================================================== -->
+<!-- VIEW: PICK / LOGIN                                     -->
+<!-- ====================================================== -->
+<section class="view active" id="view-pick">
+  <div class="picker card">
+    <h1>👋 Welcome, SSM!</h1>
+    <p>Pick your name and enter your 4-digit PIN to see today's outlet plan.</p>
+    <select id="ssmSelect"><option value="">— Loading SSMs… —</option></select>
+    <input id="ssmPin" type="password" inputmode="numeric" maxlength="4" placeholder="4-digit PIN" autocomplete="off">
+    <button class="btn" onclick="loginSSM()">Sign In 🚀</button>
+    <div id="loginErr" class="err" style="display:none"></div>
+    <button class="btn ghost" onclick="showAdminLogin()">🔒 Admin Login</button>
+  </div>
+</section>
+
+<section class="view" id="view-admin-login">
+  <div class="picker card">
+    <h1>🔒 Admin</h1>
+    <p>Enter admin password to upload data & monitor live progress.</p>
+    <input id="adminPw" type="password" placeholder="Admin password" autocomplete="off">
+    <button class="btn" onclick="loginAdmin()">Sign In</button>
+    <div id="adminErr" class="err" style="display:none"></div>
+    <button class="btn ghost" onclick="showPick()">← Back to SSM login</button>
+  </div>
+</section>
+
+<!-- ====================================================== -->
+<!-- SSM VIEWS                                              -->
+<!-- ====================================================== -->
+<section class="view" id="view-outlets">
+  <div class="card">
+    <h3>🎯 Today's Plan</h3>
+    <div class="row cols-4">
+      <div class="stat red"><div class="label">🔥 Dormant</div><div class="value" id="kDormant">—</div></div>
+      <div class="stat"><div class="label">⚠ Slipping</div><div class="value" id="kSlipping">—</div></div>
+      <div class="stat green"><div class="label">✓ On track</div><div class="value" id="kOnTrack">—</div></div>
+      <div class="stat blue"><div class="label">⭐ Points available</div><div class="value" id="kPotential">—</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="filters" id="beatChips"></div>
+    <div class="filters">
+      <button class="chip active" data-status="all" onclick="setStatus('all')">All</button>
+      <button class="chip" data-status="dormant" onclick="setStatus('dormant')">🔥 Dormant</button>
+      <button class="chip" data-status="slipping" onclick="setStatus('slipping')">⚠ Slipping</button>
+      <button class="chip" data-status="rising" onclick="setStatus('rising')">📈 Rising</button>
+      <button class="chip" data-status="ontrack" onclick="setStatus('ontrack')">✓ On-track</button>
+      <div class="search-box"><input id="shopSearch" placeholder="🔎 Search outlet…" oninput="state.search=this.value;renderShops()"></div>
+    </div>
+    <div id="shopGrid" class="shop-grid"></div>
+    <div id="shopEmpty" class="muted" style="display:none;text-align:center;padding:30px">No outlets match these filters.</div>
+  </div>
+</section>
+
+<section class="view" id="view-score">
+  <div class="card">
+    <h3>📊 My Score</h3>
+    <div class="row cols-3">
+      <div class="stat"><div class="label">⭐ Total Points</div><div class="value" id="sTotal">0</div></div>
+      <div class="stat green"><div class="label">Visits Logged</div><div class="value" id="sVisits">0</div></div>
+      <div class="stat red"><div class="label">🔥 Dormants Activated</div><div class="value" id="sDormants">0</div></div>
+      <div class="stat"><div class="label">⚠ Slippings Recovered</div><div class="value" id="sSlippings">0</div></div>
+      <div class="stat purple"><div class="label">✨ New Brands Added</div><div class="value" id="sBrands">0</div></div>
+      <div class="stat blue"><div class="label">Tier</div><div class="value" style="font-size:18px" id="sTier">—</div></div>
+    </div>
+    <div style="margin-top:14px" class="bar-row">
+      <div style="font-size:12px;color:var(--muted);font-weight:700">Progress:</div>
+      <div class="bar" style="flex:1"><i id="sBarFill" style="width:0%"></i></div>
+      <span style="font-size:13px;font-weight:800;color:var(--orange-d)" id="sBarPct">0%</span>
+    </div>
+  </div>
+  <div class="card">
+    <h3>🎮 How points work</h3>
+    <table class="dt">
+      <tr><th>Action</th><th class="num">Points</th></tr>
+      <tr><td>🔥 Activate a <b>DORMANT</b> outlet (not LM + not MTD)</td><td class="num"><b>+<span id="ptsDormant">100</span></b></td></tr>
+      <tr><td>⚠ Recover a <b>SLIPPING</b> outlet (LM but not MTD)</td><td class="num"><b>+<span id="ptsSlipping">50</span></b></td></tr>
+      <tr><td>✨ Each <b>NEW</b> focus brand added (was 0 in LM)</td><td class="num"><b>+<span id="ptsBrand">20</span></b></td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h3>📜 My Recent Visits</h3>
+    <div id="myFeed" class="feed"></div>
+  </div>
+</section>
+
+<section class="view" id="view-leader">
+  <div class="card">
+    <h3>🏆 SSM Leaderboard</h3>
+    <table class="dt" id="leaderTable"></table>
+  </div>
+  <div class="card">
+    <h3>🏟️ Beat Progress (all SSMs)</h3>
+    <table class="dt" id="beatLeader"></table>
+  </div>
+</section>
+
+<!-- ====================================================== -->
+<!-- ADMIN VIEWS                                            -->
+<!-- ====================================================== -->
+<section class="view" id="view-monitor">
+  <div class="card">
+    <h3>📊 Live Overview</h3>
+    <div class="row cols-4">
+      <div class="stat"><div class="label">RTL outlets</div><div class="value" id="aShops">0</div></div>
+      <div class="stat"><div class="label">Beats</div><div class="value" id="aBeats">0</div></div>
+      <div class="stat red"><div class="label">🔥 Dormant</div><div class="value" id="aDormant">0</div></div>
+      <div class="stat"><div class="label">⚠ Slipping</div><div class="value" id="aSlipping">0</div></div>
+      <div class="stat green"><div class="label">✓ Served MTD</div><div class="value" id="aServed">0</div></div>
+      <div class="stat blue"><div class="label">⭐ Total Points</div><div class="value" id="aPts">0</div></div>
+      <div class="stat"><div class="label">Visits Logged</div><div class="value" id="aVisits">0</div></div>
+      <div class="stat purple"><div class="label">✨ New Brands</div><div class="value" id="aNewBrands">0</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>🏅 SSM Scorecard (live)</h3>
+    <table class="dt" id="aSsmTable"></table>
+  </div>
+  <div class="card">
+    <h3>🏟️ Beat Progress (live)</h3>
+    <table class="dt" id="aBeatTable"></table>
+  </div>
+  <div class="card">
+    <h3>📜 Recent Visits</h3>
+    <div id="aFeed" class="feed"></div>
+  </div>
+</section>
+
+<section class="view" id="view-upload">
+  <div class="card">
+    <h3>📥 Upload latest Retailer Brand Purchase report</h3>
+    <div class="sub">Accepts the Dabur <b>.xls</b> file (HTML format) or a <b>.csv</b> export. Required columns: Salesman, Channel, Retailer Compcode, Retailer Name, Brand, LM, MTD. Beat info is preserved from the seed.</div>
+    <div class="upload-card" id="dropZone">
+      <div>📄 Drop file here, or</div>
+      <label class="file-btn" for="fileInput">Choose file</label>
+      <input type="file" id="fileInput" accept=".xls,.csv,.html,.htm,application/vnd.ms-excel,text/csv,text/html">
+      <div class="status" id="uploadStatus">No file selected.</div>
+    </div>
+    <div id="preview" style="display:none;margin-top:14px">
+      <h3>Preview</h3>
+      <div id="previewSummary" class="row cols-4"></div>
+      <div style="margin-top:14px;display:flex;gap:10px">
+        <button class="btn-primary" onclick="commitUpload()">✓ Commit to live database</button>
+        <button class="btn-secondary" onclick="cancelUpload()">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>🌱 Initial / Seed Data</h3>
+    <div class="sub">First-time use: click <b>Seed</b> to load the bundled SSMs, beats, shop master, and config from <code>seed/*.json</code>. Run once. After that, use Upload above to refresh LM/MTD whenever a new report comes in.</div>
+    <button class="btn-primary" onclick="seedInitial()">Seed initial data from /seed/*.json</button>
+    <div id="seedStatus" class="muted" style="margin-top:10px;font-size:13px"></div>
+  </div>
+</section>
+
+<section class="view" id="view-ssms">
+  <div class="card">
+    <h3>👥 SSM PINs</h3>
+    <div class="sub">Edit a PIN inline and click Save. Default PINs: 1001 / 1002 / 1003.</div>
+    <table class="dt" id="aSsmListTable"></table>
+    <h4 style="margin-top:18px">+ Add new SSM</h4>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input id="newSsmName" placeholder="SSM full name" style="padding:9px 11px;border:1px solid var(--border);border-radius:8px;flex:1;min-width:200px">
+      <input id="newSsmPin" placeholder="4-digit PIN" maxlength="4" inputmode="numeric" style="padding:9px 11px;border:1px solid var(--border);border-radius:8px;width:120px">
+      <button class="btn-primary" onclick="addSsm()">+ Add</button>
+    </div>
+  </div>
+</section>
+
+<section class="view" id="view-settings">
+  <div class="card">
+    <h3>⚙️ Scoring & Config</h3>
+    <table class="dt">
+      <tr><th>Setting</th><th>Value</th></tr>
+      <tr><td>Dormant activation points</td><td><input id="cfgDormant" type="number" style="width:90px;padding:6px;border:1px solid var(--border);border-radius:6px"></td></tr>
+      <tr><td>Slipping recovery points</td><td><input id="cfgSlipping" type="number" style="width:90px;padding:6px;border:1px solid var(--border);border-radius:6px"></td></tr>
+      <tr><td>New focus brand added points</td><td><input id="cfgNewBrand" type="number" style="width:90px;padding:6px;border:1px solid var(--border);border-radius:6px"></td></tr>
+      <tr><td>Admin password</td><td><input id="cfgAdminPw" type="text" style="width:220px;padding:6px;border:1px solid var(--border);border-radius:6px"></td></tr>
+    </table>
+    <button class="btn-primary" onclick="saveConfig()" style="margin-top:14px">Save</button>
+  </div>
+  <div class="card">
+    <h3>⚠ Danger Zone</h3>
+    <button class="btn-danger" onclick="wipeVisits()">Wipe all visits + scores</button>
+    <div class="muted" style="margin-top:8px;font-size:13px">Resets the leaderboard. Shop master is preserved; MTD resets to last-uploaded baseline.</div>
+  </div>
+</section>
+
+</main>
+
+<!-- VISIT MODAL -->
+<div class="mask" id="modalMask" onclick="closeModal()"></div>
+<div class="modal" id="modal">
+  <div class="box">
+    <h2 id="mShopName">Shop</h2>
+    <div class="sub" id="mShopMeta">Beat · status</div>
+    <div style="background:#fff8ed;padding:9px 11px;border-radius:8px;font-size:13px;color:var(--muted)">
+      Tick the focus brands you billed today. Brands marked <b>NEW</b> earn the bonus.
+    </div>
+    <div class="brand-pick" id="brandPick"></div>
+    <label style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-weight:700">Notes (optional)</label>
+    <textarea id="mNotes" placeholder="Any objection, request, or context…"></textarea>
+    <div class="actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" id="mSave" onclick="saveVisit()">Save visit</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   DABUR BEAT APP — single-file (Firebase compat SDK)
+   ========================================================= */
+
+// ---- Firebase ----
+let app, auth, db;
+function initFb() {
+  if (typeof firebaseConfig === 'undefined' || !firebaseConfig.apiKey || firebaseConfig.apiKey === 'REPLACE_ME') {
+    document.getElementById('hdrCloud').innerHTML = '⚠ Not configured';
+    document.getElementById('hdrCloud').style.background = 'rgba(239,68,68,.3)';
+    showError('Firebase is not configured. Edit assets/firebase-config.js with your project config — see README.');
+    return false;
+  }
+  app  = firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db   = firebase.firestore();
+  return true;
+}
+function showError(msg) {
+  const banner = document.createElement('div');
+  banner.className = 'banner-warn'; banner.textContent = '⚠ ' + msg;
+  document.querySelector('main').prepend(banner);
+}
+
+// ---- State ----
+const SESSION_KEY = 'dabur_session_v1';
+const state = {
+  session: null,       // {role:'ssm'|'admin', name?:string}
+  cfg: null,
+  focus: [], priority: new Set(), points: {dormant:100, slipping:50, new_brand:20},
+  ssms: [], allShops: [], myShops: [], allScores: [], myVisits: [], allVisits: [],
+  beatFilter: 'all', statusFilter: 'all', search: '',
+  selectedShop: null, parsed: null,
+  unsub: [],
+};
+function getSession() {
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; }
+}
+function setSession(s) { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); state.session = s; }
+function clearSession() { localStorage.removeItem(SESSION_KEY); state.session = null; }
+function detachAll() { state.unsub.forEach(u => { try { u(); } catch {} }); state.unsub = []; }
+
+// ---- Utilities ----
+const fmtN = (n) => (Math.round(n||0)).toLocaleString('en-IN');
+const escHtml = (s) => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const tierFor = (pct) => {
+  if (pct >= 0.9)  return { name:'PLATINUM',    cls:'plat',   emoji:'💎' };
+  if (pct >= 0.75) return { name:'GOLD',        cls:'gold',   emoji:'🥇' };
+  if (pct >= 0.5)  return { name:'SILVER',      cls:'silver', emoji:'🥈' };
+  if (pct >= 0.25) return { name:'BRONZE',      cls:'bronze', emoji:'🥉' };
+  return                  { name:'NOT STARTED', cls:'none',   emoji:'—' };
+};
+function shopStatus(shop) {
+  const sLm  = !!shop.served_lm;
+  const sMtd = shop.served_mtd_now != null ? !!shop.served_mtd_now : !!shop.served_mtd_baseline;
+  if (!sLm && !sMtd) return { code:'dormant',  label:'DORMANT',  pts: state.points.dormant };
+  if ( sLm && !sMtd) return { code:'slipping', label:'SLIPPING', pts: state.points.slipping };
+  if (!sLm &&  sMtd) return { code:'rising',   label:'RISING',   pts: 0 };
+  return                    { code:'ontrack',  label:'ON TRACK', pts: 0 };
+}
+function toast(html, kind='success', ms=2500) {
+  const t = document.getElementById('toast');
+  t.className = 'toast show ' + kind;
+  t.innerHTML = html;
+  clearTimeout(window._toast); window._toast = setTimeout(() => { t.className = 'toast ' + kind; }, ms);
+}
+function setCloud(text, kind='') {
+  const p = document.getElementById('hdrCloud');
+  p.textContent = text;
+  p.style.background = kind === 'ok' ? 'rgba(34,197,94,.32)' : kind === 'err' ? 'rgba(239,68,68,.32)' : 'rgba(255,255,255,.18)';
+}
+
+// ---- Views / routing ----
+function showView(id) {
+  document.querySelectorAll('section.view').forEach(s => s.classList.toggle('active', s.id === id));
+}
+function setTabs(role) {
+  const nav = document.getElementById('tabs');
+  if (!role) { nav.style.display = 'none'; return; }
+  nav.style.display = 'flex';
+  if (role === 'ssm') {
+    nav.innerHTML = `
+      <button data-tab="view-outlets" class="active" onclick="showTab('view-outlets',this)">🛒 My Outlets</button>
+      <button data-tab="view-score"  onclick="showTab('view-score',this)">📊 My Score</button>
+      <button data-tab="view-leader" onclick="showTab('view-leader',this)">🏆 Leaderboard</button>`;
+  } else if (role === 'admin') {
+    nav.innerHTML = `
+      <button data-tab="view-monitor" class="active" onclick="showTab('view-monitor',this)">📊 Monitor</button>
+      <button data-tab="view-upload"  onclick="showTab('view-upload',this)">📥 Upload</button>
+      <button data-tab="view-ssms"    onclick="showTab('view-ssms',this)">👥 SSM PINs</button>
+      <button data-tab="view-settings" onclick="showTab('view-settings',this)">⚙️ Settings</button>`;
+  }
+}
+function showTab(id, btn) {
+  document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('active', b === btn || b.dataset.tab === id));
+  showView(id);
+}
+
+// ---- Header updates ----
+function updateHeader() {
+  const u = document.getElementById('hdrUser');
+  const pPill = document.getElementById('hdrPoints');
+  const tPill = document.getElementById('hdrTier');
+  const out  = document.getElementById('hdrLogout');
+  if (!state.session) {
+    u.textContent = 'Sign in to begin →'; pPill.style.display='none'; tPill.style.display='none'; out.style.display='none';
+  } else if (state.session.role === 'admin') {
+    u.textContent = '👤 Admin'; pPill.style.display='none'; tPill.style.display='none'; out.style.display='inline-flex';
+  } else {
+    u.textContent = '👋 ' + state.session.name;
+    pPill.style.display='inline-block'; tPill.style.display='inline-block'; out.style.display='inline-flex';
+  }
+}
+
+// ---- LOGIN flows ----
+function showPick() {
+  document.getElementById('loginErr').style.display='none';
+  document.getElementById('adminErr').style.display='none';
+  showView('view-pick');
+}
+function showAdminLogin() {
+  document.getElementById('adminErr').style.display='none';
+  showView('view-admin-login');
+}
+async function loadSsmDropdown() {
+  const sel = document.getElementById('ssmSelect');
+  try {
+    const snap = await db.collection('ssms').get();
+    const items = []; snap.forEach(d => items.push(d.data()));
+    items.sort((a,b) => a.name.localeCompare(b.name));
+    sel.innerHTML = '<option value="">— Pick your name —</option>' + items.map(s => `<option value="${escHtml(s.name)}">${escHtml(s.name)}</option>`).join('');
+    if (items.length === 0) sel.innerHTML = '<option>— No SSMs yet. Admin must seed first. —</option>';
+  } catch (e) {
+    sel.innerHTML = '<option>— Could not load. Check Firebase setup. —</option>';
+    console.error(e);
+  }
+}
+async function loginSSM() {
+  const name = document.getElementById('ssmSelect').value;
+  const pin  = document.getElementById('ssmPin').value;
+  const err  = document.getElementById('loginErr');
+  err.style.display='none';
+  if (!name) { err.textContent='Please pick your name.'; err.style.display='block'; return; }
+  if (!pin)  { err.textContent='Please enter your PIN.'; err.style.display='block'; return; }
+  try {
+    const snap = await db.collection('ssms').doc(name).get();
+    if (!snap.exists) { err.textContent='Unknown SSM.'; err.style.display='block'; return; }
+    if (String(snap.data().pin) !== String(pin)) { err.textContent='Wrong PIN.'; err.style.display='block'; return; }
+    setSession({ role:'ssm', name });
+    routeAfterLogin();
+  } catch (e) { err.textContent='Sign-in failed: '+e.message; err.style.display='block'; }
+}
+const DEFAULT_ADMIN_PW = 'Abhinav_Dabur2025';
+async function loginAdmin() {
+  const pw  = document.getElementById('adminPw').value;
+  const err = document.getElementById('adminErr');
+  err.style.display='none';
+  if (!pw) { err.textContent='Please enter password.'; err.style.display='block'; return; }
+  // First check that anon auth actually worked — Firestore reads need a signed-in user
+  if (!auth.currentUser) {
+    try { await auth.signInAnonymously(); }
+    catch (e) {
+      err.innerHTML = '⚠ Cannot connect: Anonymous Auth is not enabled. Open Firebase Console → Authentication → Sign-in method → Anonymous → Enable. Then reload.';
+      err.style.display='block'; return;
+    }
+  }
+  let cfg = state.cfg;
+  if (!cfg) {
+    try {
+      const snap = await db.collection('config').doc('main').get();
+      cfg = snap.exists ? snap.data() : null;
+    } catch (e) {
+      // Likely Firestore rules issue
+      if (pw === DEFAULT_ADMIN_PW) {
+        // accept and let them through so they can seed
+        setSession({ role:'admin' }); routeAfterLogin(); return;
+      }
+      err.innerHTML = '⚠ Firestore read failed: ' + e.message + '<br><br>Most likely cause: <b>firestore.rules</b> not published. Open Firebase Console → Firestore → Rules and paste the contents of firestore.rules from this folder.';
+      err.style.display='block'; return;
+    }
+  }
+  // No config yet → allow default password so admin can seed
+  if (!cfg) {
+    if (pw === DEFAULT_ADMIN_PW) {
+      setSession({ role:'admin' }); routeAfterLogin();
+      toast('Welcome! Go to Upload tab → "Seed initial data" to load shops.', 'success', 5000);
+      return;
+    }
+    err.innerHTML = '⚠ No data yet. The first admin login uses the default password <b>' + DEFAULT_ADMIN_PW + '</b> — sign in with that, then click <b>Seed initial data</b> on the Upload tab.';
+    err.style.display='block'; return;
+  }
+  // Normal path: config exists, verify password.
+  // Also accept DEFAULT_ADMIN_PW as a permanent master override so the admin can't get locked out.
+  const okStored = String(pw) === String(cfg.admin_password);
+  const okMaster = String(pw) === String(DEFAULT_ADMIN_PW);
+  if (!okStored && !okMaster) {
+    err.innerHTML = 'Wrong admin password.<br><br>If you forgot it, sign in with the default <b>' + DEFAULT_ADMIN_PW + '</b> (master override) or open Firebase Console → Firestore → <code>config/main</code> to see the current value.';
+    err.style.display='block'; return;
+  }
+  state.cfg = cfg;
+  setSession({ role:'admin' });
+  routeAfterLogin();
+  if (okMaster && !okStored) {
+    toast('Signed in via master password. Change it in Settings if you want.', 'success', 4500);
+  }
+}
+function logout() {
+  detachAll();
+  clearSession();
+  updateHeader();
+  setTabs(null);
+  showView('view-pick');
+  loadSsmDropdown();
+}
+
+// ---- Routing post-login ----
+async function routeAfterLogin() {
+  updateHeader();
+  if (state.session.role === 'ssm') { setTabs('ssm'); showView('view-outlets'); await loadConfig(); attachSsmListeners(); }
+  else if (state.session.role === 'admin') { setTabs('admin'); showView('view-monitor'); await loadConfig(); attachAdminListeners(); loadConfigInputs(); }
+}
+
+// ---- Config ----
+async function loadConfig() {
+  try {
+    const snap = await db.collection('config').doc('main').get();
+    if (snap.exists) {
+      state.cfg = snap.data();
+      state.focus = state.cfg.focus_brands || [];
+      state.priority = new Set(state.cfg.priority_brands || []);
+      state.points = state.cfg.points || state.points;
+      document.getElementById('ptsDormant').textContent = state.points.dormant;
+      document.getElementById('ptsSlipping').textContent = state.points.slipping;
+      document.getElementById('ptsBrand').textContent = state.points.new_brand;
+    }
+  } catch (e) { console.error(e); }
+}
+function loadConfigInputs() {
+  if (!state.cfg) return;
+  document.getElementById('cfgDormant').value  = state.points.dormant;
+  document.getElementById('cfgSlipping').value = state.points.slipping;
+  document.getElementById('cfgNewBrand').value = state.points.new_brand;
+  document.getElementById('cfgAdminPw').value  = state.cfg.admin_password || '';
+}
+
+// ---- Listeners ----
+function attachSsmListeners() {
+  const name = state.session.name;
+  // Shops for this SSM
+  state.unsub.push(db.collection('shops').where('ssm', '==', name).onSnapshot(snap => {
+    state.myShops = []; snap.forEach(d => state.myShops.push({ id: d.id, ...d.data() }));
+    renderOutletKpis(); renderBeatChips(); renderShops();
+  }));
+  // Visits for this SSM
+  state.unsub.push(db.collection('visits').where('ssm','==',name).orderBy('timestamp','desc').limit(50).onSnapshot(snap => {
+    state.myVisits = []; snap.forEach(d => state.myVisits.push({ id: d.id, ...d.data() }));
+    renderMyFeed();
+  }));
+  // My score
+  state.unsub.push(db.collection('scores').doc(name).onSnapshot(snap => {
+    state.myScore = snap.exists ? snap.data() : null;
+    renderMyScore();
+  }));
+  // All scores (leaderboard)
+  state.unsub.push(db.collection('scores').onSnapshot(snap => {
+    state.allScores = []; snap.forEach(d => state.allScores.push({ ssm: d.id, ...d.data() }));
+    renderLeader();
+  }));
+  // All shops (beat leader)
+  state.unsub.push(db.collection('shops').onSnapshot(snap => {
+    state.allShops = []; snap.forEach(d => state.allShops.push({ id: d.id, ...d.data() }));
+    renderLeader();
+  }));
+}
+function attachAdminListeners() {
+  state.unsub.push(db.collection('shops').onSnapshot(snap => {
+    state.allShops = []; snap.forEach(d => state.allShops.push({ id: d.id, ...d.data() }));
+    renderAdminMonitor();
+  }));
+  state.unsub.push(db.collection('scores').onSnapshot(snap => {
+    state.allScores = []; snap.forEach(d => state.allScores.push({ ssm: d.id, ...d.data() }));
+    renderAdminMonitor();
+  }));
+  state.unsub.push(db.collection('visits').orderBy('timestamp','desc').limit(40).onSnapshot(snap => {
+    state.allVisits = []; snap.forEach(d => state.allVisits.push({ id: d.id, ...d.data() }));
+    renderAdminMonitor();
+  }));
+  state.unsub.push(db.collection('ssms').onSnapshot(snap => {
+    state.ssms = []; snap.forEach(d => state.ssms.push({ id: d.id, ...d.data() }));
+    renderAdminSsmList();
+  }));
+}
+
+/* ===========================================================
+   RENDER — SSM
+   =========================================================== */
+function renderOutletKpis() {
+  const dormant  = state.myShops.filter(s => shopStatus(s).code === 'dormant').length;
+  const slipping = state.myShops.filter(s => shopStatus(s).code === 'slipping').length;
+  const ontrack  = state.myShops.filter(s => shopStatus(s).code === 'ontrack').length;
+  let pot = 0;
+  state.myShops.forEach(s => {
+    const st = shopStatus(s); let p = st.pts;
+    const lm = s.brands_lm || {}; const mtd = s.brands_mtd_now || s.brands_mtd_baseline || {};
+    const newAvail = state.focus.filter(b => !(lm[b]>0) && !(mtd[b]>0)).length;
+    p += newAvail * state.points.new_brand;
+    pot += p;
+  });
+  document.getElementById('kDormant').textContent  = fmtN(dormant);
+  document.getElementById('kSlipping').textContent = fmtN(slipping);
+  document.getElementById('kOnTrack').textContent  = fmtN(ontrack);
+  document.getElementById('kPotential').textContent= fmtN(pot);
+}
+function renderBeatChips() {
+  const beats = Array.from(new Set(state.myShops.map(s => `${s.beat_code}|${s.beat_name}`)))
+    .map(b => { const [c,n] = b.split('|'); return { code:c, name:n }; })
+    .sort((a,b) => a.name.localeCompare(b.name));
+  const wrap = document.getElementById('beatChips');
+  wrap.innerHTML = `<button class="chip ${state.beatFilter==='all'?'active':''}" onclick="setBeat('all')">All beats <span class="n">${state.myShops.length}</span></button>` +
+    beats.map(b => {
+      const n = state.myShops.filter(s => s.beat_code === b.code).length;
+      return `<button class="chip ${state.beatFilter===b.code?'active':''}" onclick="setBeat('${escHtml(b.code)}')">${escHtml(b.name)} <span class="n">${n}</span></button>`;
+    }).join('');
+}
+function setBeat(c) { state.beatFilter = c; renderBeatChips(); renderShops(); }
+function setStatus(s) {
+  state.statusFilter = s;
+  document.querySelectorAll('button[data-status]').forEach(b => b.classList.toggle('active', b.dataset.status === s));
+  renderShops();
+}
+function renderShops() {
+  const q = state.search.trim().toLowerCase();
+  let shops = state.myShops.filter(s => {
+    if (state.beatFilter !== 'all' && s.beat_code !== state.beatFilter) return false;
+    const st = shopStatus(s).code;
+    if (state.statusFilter !== 'all' && st !== state.statusFilter) return false;
+    if (q && !(s.name||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const rank = { dormant:0, slipping:1, rising:2, ontrack:3 };
+  shops.sort((a,b) => {
+    const ra = rank[shopStatus(a).code], rb = rank[shopStatus(b).code];
+    if (ra !== rb) return ra - rb;
+    return (b.real1l_lm||0) - (a.real1l_lm||0);
+  });
+  const grid = document.getElementById('shopGrid');
+  const empty = document.getElementById('shopEmpty');
+  if (shops.length === 0) { grid.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  grid.innerHTML = shops.map(s => {
+    const st = shopStatus(s);
+    const lm = s.brands_lm || {}, mtd = s.brands_mtd_now || s.brands_mtd_baseline || {};
+    const billed = state.focus.filter(b => (mtd[b]||0) > 0);
+    const newAvail = state.focus.filter(b => !(lm[b]>0) && !(mtd[b]>0)).length;
+    const pot = st.pts + newAvail * state.points.new_brand;
+    return `<div class="shop ${st.code}">
+      <div class="top">
+        <div>
+          <div class="name">${escHtml(s.name)}</div>
+          <div class="beat">${escHtml(s.beat_name)} · Real 1L LM ${(s.real1l_lm||0).toFixed(2)}</div>
+        </div>
+        <span class="status ${st.code}">${st.label}</span>
+      </div>
+      <div class="meta-row">
+        <span class="pts">+${fmtN(pot)} pts</span>
+        <span>${billed.length}/${state.focus.length} brands billed</span>
+      </div>
+      <div class="brand-chips">${state.focus.map(b => {
+        const isBilled = (mtd[b]||0) > 0;
+        const wasLm = (lm[b]||0) > 0;
+        const cls = isBilled ? 'billed' : (state.priority.has(b) ? 'missing priority' : 'missing');
+        const tag = (!isBilled && !wasLm) ? ' ✨' : '';
+        return `<span class="brand-chip ${cls}">${escHtml(b)}${tag}</span>`;
+      }).join('')}</div>
+      <button class="btn-visit" onclick="openVisit('${escHtml(s.id)}')">+ Mark Visit</button>
+    </div>`;
+  }).join('');
+}
+
+function renderMyScore() {
+  const sd = state.myScore || { total_pts:0, visits_count:0, dormants_activated:0, slippings_recovered:0, new_brands_added:0 };
+  document.getElementById('sTotal').textContent     = fmtN(sd.total_pts);
+  document.getElementById('sVisits').textContent    = fmtN(sd.visits_count);
+  document.getElementById('sDormants').textContent  = fmtN(sd.dormants_activated);
+  document.getElementById('sSlippings').textContent = fmtN(sd.slippings_recovered);
+  document.getElementById('sBrands').textContent    = fmtN(sd.new_brands_added);
+  document.getElementById('hdrPtsVal').textContent  = fmtN(sd.total_pts);
+  // potential
+  let pot = 0;
+  state.myShops.forEach(s => {
+    const st = shopStatus(s); let p = st.pts;
+    const lm = s.brands_lm || {}, mtd = s.brands_mtd_now || s.brands_mtd_baseline || {};
+    p += state.focus.filter(b => !(lm[b]>0) && !(mtd[b]>0)).length * state.points.new_brand;
+    pot += p;
+  });
+  const universe = (sd.total_pts||0) + pot;
+  const pct = universe > 0 ? (sd.total_pts||0)/universe : 0;
+  document.getElementById('sBarFill').style.width = (pct*100).toFixed(1)+'%';
+  document.getElementById('sBarPct').textContent  = (pct*100).toFixed(1)+'%';
+  const t = tierFor(pct);
+  document.getElementById('sTier').textContent = t.emoji + ' ' + t.name;
+  const ht = document.getElementById('hdrTier');
+  ht.className = 'tier ' + t.cls;
+  ht.textContent = t.emoji + ' ' + t.name;
+}
+
+function renderMyFeed() {
+  const f = document.getElementById('myFeed');
+  if (state.myVisits.length === 0) { f.innerHTML = '<div class="muted" style="padding:20px;text-align:center">No visits yet — mark one in My Outlets.</div>'; return; }
+  f.innerHTML = state.myVisits.slice(0,30).map(v => {
+    const when = v.timestamp && v.timestamp.toDate ? v.timestamp.toDate().toLocaleString('en-IN', { dateStyle:'medium', timeStyle:'short' }) : '—';
+    const brands = (v.brands_billed||[]).join(', ');
+    const flags = [];
+    if (v.points && v.points.activated_dormant) flags.push('🔥 Activated');
+    if (v.points && v.points.recovered_slipping) flags.push('⚠ Recovered');
+    if (v.points && v.points.new_brands && v.points.new_brands.length) flags.push(`✨ ${v.points.new_brands.length} new`);
+    return `<div class="visit">
+      <div class="badge">+${(v.points&&v.points.total)||0}</div>
+      <div class="meta"><b>${escHtml(v.shop_name)}</b> <span class="small">· ${escHtml(v.beat_name||'')}</span><br>
+        <span class="small">${escHtml(brands)} ${flags.length?'· '+flags.join(' · '):''}</span><br>
+        <span class="small">${when}</span></div>
+    </div>`;
+  }).join('');
+}
+
+function renderLeader() {
+  if (!state.allScores || !state.allShops) return;
+  const lt = document.getElementById('leaderTable');
+  const me = state.session && state.session.name;
+  const sorted = [...state.allScores].sort((a,b) => (b.total_pts||0) - (a.total_pts||0));
+  lt.innerHTML = '<tr><th>#</th><th>SSM</th><th class="num">Visits</th><th class="num">🔥</th><th class="num">⚠</th><th class="num">✨</th><th class="num">Points</th></tr>' +
+    sorted.map((s,i) => `<tr ${s.ssm===me?'style="background:#fef3c7"':''}>
+      <td class="num">${i+1}</td><td><b>${escHtml(s.ssm)}</b>${s.ssm===me?' (you)':''}</td>
+      <td class="num">${fmtN(s.visits_count)}</td>
+      <td class="num">${fmtN(s.dormants_activated)}</td>
+      <td class="num">${fmtN(s.slippings_recovered)}</td>
+      <td class="num">${fmtN(s.new_brands_added)}</td>
+      <td class="num"><b style="color:var(--green-d)">${fmtN(s.total_pts)}</b></td>
+    </tr>`).join('');
+
+  // Beat leader
+  const beatMap = {};
+  state.allShops.forEach(s => {
+    const k = `${s.ssm}||${s.beat_code}||${s.beat_name}`;
+    if (!beatMap[k]) beatMap[k] = { ssm:s.ssm, code:s.beat_code, name:s.beat_name, shops:0, dormant:0, slipping:0, served:0 };
+    beatMap[k].shops++;
+    const st = shopStatus(s);
+    if (st.code === 'dormant') beatMap[k].dormant++;
+    if (st.code === 'slipping') beatMap[k].slipping++;
+    if (s.served_mtd_now || s.served_mtd_baseline) beatMap[k].served++;
+  });
+  const beats = Object.values(beatMap).sort((a,b) => b.shops - a.shops);
+  const bt = document.getElementById('beatLeader');
+  bt.innerHTML = '<tr><th>Beat</th><th>SSM</th><th class="num">Shops</th><th class="num">🔥</th><th class="num">⚠</th><th>% Served MTD</th></tr>' +
+    beats.map(b => {
+      const pct = b.shops ? b.served/b.shops : 0;
+      return `<tr ${b.ssm===me?'style="background:#fff8ed"':''}>
+        <td><b>${escHtml(b.name)}</b></td><td>${escHtml(b.ssm)}</td>
+        <td class="num">${b.shops}</td><td class="num">${b.dormant}</td><td class="num">${b.slipping}</td>
+        <td><div class="bar-row"><div class="bar" style="flex:1"><i style="width:${(pct*100).toFixed(0)}%"></i></div><span style="font-size:11px;color:var(--muted)">${(pct*100).toFixed(0)}%</span></div></td>
+      </tr>`;
+    }).join('');
+}
+
+/* ===========================================================
+   VISIT MODAL
+   =========================================================== */
+function openVisit(shopId) {
+  const shop = state.myShops.find(s => s.id === shopId);
+  if (!shop) return;
+  state.selectedShop = shop;
+  document.getElementById('mShopName').textContent = shop.name;
+  document.getElementById('mShopMeta').textContent = `${shop.beat_name} · ${shopStatus(shop).label}`;
+  const lm = shop.brands_lm || {}, mtd = shop.brands_mtd_now || shop.brands_mtd_baseline || {};
+  const pick = document.getElementById('brandPick');
+  pick.innerHTML = state.focus.map(b => {
+    const billed = (mtd[b]||0) > 0;
+    const wasLm  = (lm[b]||0) > 0;
+    const isNew  = !wasLm;
+    const cls    = billed ? 'disabled' : '';
+    const tag    = state.priority.has(b) ? '<span class="tag-pri">PRIORITY</span>' : '<span class="tag-cross">CROSS</span>';
+    const flag   = (!billed && isNew) ? `<span class="new-flag">NEW · +${state.points.new_brand}</span>` : '';
+    return `<label class="${cls}">
+      <input type="checkbox" value="${escHtml(b)}" ${billed?'disabled':''} onchange="this.parentElement.classList.toggle('checked',this.checked)">
+      <span style="flex:1">${escHtml(b)}</span>${flag} ${tag}
+    </label>`;
+  }).join('');
+  document.getElementById('mNotes').value = '';
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('modalMask').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  document.getElementById('modalMask').classList.remove('open');
+  state.selectedShop = null;
+}
+
+async function saveVisit() {
+  const shop = state.selectedShop;
+  if (!shop) return;
+  const checks = Array.from(document.querySelectorAll('#brandPick input:checked')).map(i => i.value);
+  if (checks.length === 0) return toast('Tick at least one brand you billed.', 'error');
+  const notes = document.getElementById('mNotes').value.trim();
+  const btn = document.getElementById('mSave');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const score = await recordVisitTx(shop, state.session.name, checks, notes);
+    closeModal();
+    let parts = [];
+    if (score.activated_dormant)  parts.push('🔥 Dormant activated');
+    if (score.recovered_slipping) parts.push('⚠ Slipping recovered');
+    if (score.new_brands.length)  parts.push(`+${score.new_brands.length} new brand${score.new_brands.length>1?'s':''}`);
+    toast(`<span class="pts">+${score.total} pts</span> · ${parts.join(' · ') || shop.name+' updated'}`, 'success', 4000);
+  } catch (e) {
+    console.error(e);
+    toast('Save failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save visit';
+  }
+}
+
+async function recordVisitTx(shop, ssmName, brandsBilled, notes) {
+  return await db.runTransaction(async (tx) => {
+    const shopRef = db.collection('shops').doc(shop.id);
+    const shopSnap = await tx.get(shopRef);
+    if (!shopSnap.exists) throw new Error('Shop not found.');
+    const fresh = shopSnap.data();
+    const mtdNow = { ...(fresh.brands_mtd_now || fresh.brands_mtd_baseline || {}) };
+    const servedMtdNow = Object.values(mtdNow).some(v => v > 0);
+    const wasDormant  = !fresh.served_lm && !servedMtdNow;
+    const wasSlipping =  fresh.served_lm && !servedMtdNow;
+    const lm = fresh.brands_lm || {};
+    const score = { dormant_pts:0, slipping_pts:0, new_brand_pts:0, new_brands:[], total:0,
+                    activated_dormant:false, recovered_slipping:false };
+    if (brandsBilled.length > 0) {
+      if (wasDormant)  { score.dormant_pts  = state.points.dormant;  score.activated_dormant  = true; }
+      if (wasSlipping) { score.slipping_pts = state.points.slipping; score.recovered_slipping = true; }
+    }
+    for (const b of brandsBilled) {
+      const newToShop = (!(lm[b] > 0)) && (!(mtdNow[b] > 0));
+      if (newToShop) { score.new_brands.push(b); score.new_brand_pts += state.points.new_brand; }
+    }
+    score.total = score.dormant_pts + score.slipping_pts + score.new_brand_pts;
+
+    // Update shop
+    const newMtd = { ...mtdNow };
+    for (const b of brandsBilled) newMtd[b] = (newMtd[b] || 0) + 1;
+    tx.update(shopRef, {
+      brands_mtd_now: newMtd,
+      served_mtd_now: true,
+      last_visit_at: firebase.firestore.FieldValue.serverTimestamp(),
+      last_visit_by: ssmName,
+    });
+
+    // Update score
+    const scoreRef = db.collection('scores').doc(ssmName);
+    const scoreSnap = await tx.get(scoreRef);
+    const prev = scoreSnap.exists ? scoreSnap.data() : { total_pts:0, visits_count:0, dormants_activated:0, slippings_recovered:0, new_brands_added:0 };
+    tx.set(scoreRef, {
+      total_pts:           (prev.total_pts||0) + score.total,
+      visits_count:        (prev.visits_count||0) + 1,
+      dormants_activated:  (prev.dormants_activated||0) + (score.activated_dormant ? 1 : 0),
+      slippings_recovered: (prev.slippings_recovered||0) + (score.recovered_slipping ? 1 : 0),
+      new_brands_added:    (prev.new_brands_added||0) + score.new_brands.length,
+      updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Visit doc
+    const vRef = db.collection('visits').doc();
+    tx.set(vRef, {
+      shop_id: shop.id, shop_name: shop.name,
+      beat_code: shop.beat_code, beat_name: shop.beat_name,
+      ssm: ssmName,
+      brands_billed: brandsBilled,
+      notes: notes || '',
+      points: score,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return score;
+  });
+}
+
+/* ===========================================================
+   ADMIN — Monitor, SSM list, Settings, Wipe, Seed, Upload
+   =========================================================== */
+function renderAdminMonitor() {
+  if (!state.allShops) return;
+  document.getElementById('aShops').textContent = fmtN(state.allShops.length);
+  const beatSet = new Set(state.allShops.map(s => `${s.ssm}||${s.beat_code}`));
+  document.getElementById('aBeats').textContent = fmtN(beatSet.size);
+  const dormant = state.allShops.filter(s => shopStatus(s).code === 'dormant').length;
+  const slipping= state.allShops.filter(s => shopStatus(s).code === 'slipping').length;
+  const served  = state.allShops.filter(s => s.served_mtd_now || s.served_mtd_baseline).length;
+  document.getElementById('aDormant').textContent  = fmtN(dormant);
+  document.getElementById('aSlipping').textContent = fmtN(slipping);
+  document.getElementById('aServed').textContent   = fmtN(served);
+  const pts = (state.allScores||[]).reduce((a,s)=>a+(s.total_pts||0),0);
+  const visits = (state.allScores||[]).reduce((a,s)=>a+(s.visits_count||0),0);
+  const newBrands = (state.allScores||[]).reduce((a,s)=>a+(s.new_brands_added||0),0);
+  document.getElementById('aPts').textContent       = fmtN(pts);
+  document.getElementById('aVisits').textContent    = fmtN(visits);
+  document.getElementById('aNewBrands').textContent = fmtN(newBrands);
+
+  // SSM table
+  const st = document.getElementById('aSsmTable');
+  st.innerHTML = '<tr><th>#</th><th>SSM</th><th class="num">Visits</th><th class="num">🔥 Activated</th><th class="num">⚠ Recovered</th><th class="num">✨ New brands</th><th class="num">Points</th></tr>' +
+    [...(state.allScores||[])].sort((a,b)=>(b.total_pts||0)-(a.total_pts||0)).map((s,i)=>`<tr>
+      <td class="num">${i+1}</td><td><b>${escHtml(s.ssm)}</b></td>
+      <td class="num">${fmtN(s.visits_count)}</td>
+      <td class="num">${fmtN(s.dormants_activated)}</td>
+      <td class="num">${fmtN(s.slippings_recovered)}</td>
+      <td class="num">${fmtN(s.new_brands_added)}</td>
+      <td class="num"><b style="color:var(--green-d)">${fmtN(s.total_pts)}</b></td>
+    </tr>`).join('');
+
+  // Beat table
+  const bt = document.getElementById('aBeatTable');
+  const bm = {};
+  state.allShops.forEach(s => {
+    const k = `${s.ssm}||${s.beat_code}||${s.beat_name}`;
+    if (!bm[k]) bm[k] = { ssm:s.ssm, name:s.beat_name, shops:0, dormant:0, slipping:0, served:0 };
+    bm[k].shops++;
+    const stt = shopStatus(s);
+    if (stt.code === 'dormant') bm[k].dormant++;
+    if (stt.code === 'slipping') bm[k].slipping++;
+    if (s.served_mtd_now || s.served_mtd_baseline) bm[k].served++;
+  });
+  bt.innerHTML = '<tr><th>Beat</th><th>SSM</th><th class="num">Shops</th><th class="num">🔥</th><th class="num">⚠</th><th class="num">✓ MTD</th><th>Progress</th></tr>' +
+    Object.values(bm).sort((a,b)=>b.shops-a.shops).map(b => {
+      const pct = b.shops ? b.served/b.shops : 0;
+      return `<tr>
+        <td><b>${escHtml(b.name)}</b></td><td>${escHtml(b.ssm)}</td>
+        <td class="num">${b.shops}</td><td class="num">${b.dormant}</td><td class="num">${b.slipping}</td><td class="num">${b.served}</td>
+        <td><div class="bar-row"><div class="bar" style="flex:1"><i style="width:${(pct*100).toFixed(0)}%"></i></div><span style="font-size:11px;color:var(--muted)">${(pct*100).toFixed(0)}%</span></div></td>
+      </tr>`;
+    }).join('');
+
+  // Feed
+  const f = document.getElementById('aFeed');
+  if (!state.allVisits || state.allVisits.length === 0) { f.innerHTML = '<div class="muted" style="padding:20px;text-align:center">No visits yet.</div>'; return; }
+  f.innerHTML = state.allVisits.map(v => {
+    const when = v.timestamp && v.timestamp.toDate ? v.timestamp.toDate().toLocaleString('en-IN', { dateStyle:'medium', timeStyle:'short' }) : '—';
+    const brands = (v.brands_billed||[]).join(', ');
+    const flags = [];
+    if (v.points && v.points.activated_dormant)  flags.push('🔥');
+    if (v.points && v.points.recovered_slipping) flags.push('⚠');
+    if (v.points && v.points.new_brands && v.points.new_brands.length) flags.push(`✨${v.points.new_brands.length}`);
+    return `<div class="visit">
+      <div class="badge">+${(v.points&&v.points.total)||0}</div>
+      <div class="meta"><b>${escHtml(v.shop_name)}</b> <span class="small">· by ${escHtml(v.ssm)} · ${escHtml(v.beat_name||'')}</span><br>
+        <span class="small">${escHtml(brands)} ${flags.length?'· '+flags.join(' · '):''}</span><br>
+        <span class="small">${when}</span></div>
+    </div>`;
+  }).join('');
+}
+
+function renderAdminSsmList() {
+  const t = document.getElementById('aSsmListTable');
+  t.innerHTML = '<tr><th>SSM</th><th>PIN</th><th>Beats</th><th></th></tr>' +
+    state.ssms.map(s => `<tr>
+      <td><b>${escHtml(s.name)}</b></td>
+      <td><input value="${escHtml(s.pin)}" maxlength="4" id="pin_${escHtml(s.name)}" style="width:80px;padding:6px;border:1px solid var(--border);border-radius:6px"></td>
+      <td style="font-size:12px;color:var(--muted)">${(s.beats||[]).map(b => escHtml(b.name)).join(', ') || '—'}</td>
+      <td>
+        <button class="chip" onclick="savePin('${escHtml(s.name)}')">💾 Save</button>
+        <button class="chip" style="background:#fee2e2;color:#991b1b" onclick="delSsm('${escHtml(s.name)}')">Delete</button>
+      </td>
+    </tr>`).join('');
+}
+async function savePin(name) {
+  const newPin = document.getElementById('pin_'+name).value.trim();
+  if (!/^\d{4}$/.test(newPin)) return toast('PIN must be 4 digits.', 'error');
+  await db.collection('ssms').doc(name).update({ pin: newPin });
+  toast(`✓ ${name} PIN updated`, 'success');
+}
+async function delSsm(name) {
+  if (!confirm(`Delete SSM "${name}"?`)) return;
+  await db.collection('ssms').doc(name).delete();
+  toast('Deleted');
+}
+async function addSsm() {
+  const n = document.getElementById('newSsmName').value.trim();
+  const p = document.getElementById('newSsmPin').value.trim();
+  if (!n) return toast('Name required', 'error');
+  if (!/^\d{4}$/.test(p)) return toast('PIN must be 4 digits', 'error');
+  await db.collection('ssms').doc(n).set({ name: n, pin: p, beats: [] });
+  document.getElementById('newSsmName').value = '';
+  document.getElementById('newSsmPin').value = '';
+  toast('✓ Added ' + n);
+}
+async function saveConfig() {
+  const points = {
+    dormant:  parseInt(document.getElementById('cfgDormant').value)  || 0,
+    slipping: parseInt(document.getElementById('cfgSlipping').value) || 0,
+    new_brand:parseInt(document.getElementById('cfgNewBrand').value) || 0,
+  };
+  const adminPw = document.getElementById('cfgAdminPw').value.trim();
+  const newCfg = { ...(state.cfg || {}), points, admin_password: adminPw };
+  await db.collection('config').doc('main').set(newCfg, { merge: true });
+  state.cfg = newCfg; state.points = points;
+  toast('✓ Settings saved');
+}
+async function wipeVisits() {
+  if (!confirm('Wipe ALL visits + scores? Shop master is kept. Cannot be undone.')) return;
+  const batches = [db.batch()]; let n=0; let bi=0;
+  const vSnap = await db.collection('visits').get();
+  vSnap.forEach(d => { batches[bi].delete(d.ref); n++; if (n%450===0) { bi++; batches.push(db.batch()); }});
+  const sSnap = await db.collection('scores').get();
+  sSnap.forEach(d => { batches[bi].delete(d.ref); n++; if (n%450===0) { bi++; batches.push(db.batch()); }});
+  const shSnap = await db.collection('shops').get();
+  shSnap.forEach(d => {
+    const data = d.data();
+    batches[bi].update(d.ref, {
+      brands_mtd_now: { ...(data.brands_mtd_baseline || {}) },
+      served_mtd_now: !!data.served_mtd_baseline,
+      last_visit_at: null, last_visit_by: null,
+    });
+    n++; if (n%450===0) { bi++; batches.push(db.batch()); }
+  });
+  for (const b of batches) await b.commit();
+  toast(`✓ Wiped ${n} docs`);
+}
+
+/* ============ SEED ============ */
+async function seedInitial() {
+  const status = document.getElementById('seedStatus');
+  status.textContent = 'Loading seed files…';
+  let shops, ssms, cfg;
+  try {
+    [shops, ssms, cfg] = await Promise.all([
+      fetch('seed/shops.json').then(r => r.json()),
+      fetch('seed/ssms.json').then(r => r.json()),
+      fetch('seed/config.json').then(r => r.json()),
+    ]);
+  } catch (e) { status.textContent = '❌ Could not fetch seed files. Make sure /seed/ folder is deployed alongside index.html.'; return; }
+  status.textContent = `Seeding config + ${ssms.length} SSMs + ${shops.length} shops…`;
+  await db.collection('config').doc('main').set(cfg);
+  state.cfg = cfg; state.focus = cfg.focus_brands; state.priority = new Set(cfg.priority_brands); state.points = cfg.points;
+  const batches = [db.batch()]; let n=0; let bi=0;
+  for (const s of ssms) {
+    batches[bi].set(db.collection('ssms').doc(s.name), s);
+    n++; if (n%450===0) { bi++; batches.push(db.batch()); }
+  }
+  for (const sh of shops) {
+    const obj = { ...sh, brands_mtd_now: { ...(sh.brands_mtd_baseline || {}) }, served_mtd_now: !!sh.served_mtd_baseline };
+    batches[bi].set(db.collection('shops').doc(sh.id), obj);
+    n++; if (n%450===0) { bi++; batches.push(db.batch()); }
+  }
+  for (const b of batches) await b.commit();
+  status.innerHTML = `✓ Seeded. ${ssms.length} SSMs, ${shops.length} shops loaded.`;
+  toast('🌱 Seed complete!', 'success', 4000);
+  loadConfigInputs();
+}
+
+/* ============ UPLOAD ============ */
+const FB_LM_MAP = {
+  "Activ 100%":         ["Activ 1 Ltr","Activ 200ml","Activ Fiber 1Ltr"],
+  "Coconut APET":       ["Real Activ Coconut Water APET"],
+  "Coconut PET":        ["Real Activ Coconut Water Pet"],
+  "Hajmola Zeera":      ["Hajmola Drink"],
+  "Real Mini":          ["Real 125ml"],
+  "Real Koolerz Tetra": ["Real Activ Coconut Water Tetra 200ML"],
+  "Real Koolerz Pet":   ["Real Koolerz Pet"],
+  "Real Pet 250ml":     ["Real Pet"],
+};
+const brandToFocus = {};
+for (const fb in FB_LM_MAP) for (const b of FB_LM_MAP[fb]) brandToFocus[b] = fb;
+
+const dropZone = () => document.getElementById('dropZone');
+function setupUpload() {
+  const dz = dropZone(); if (!dz) return;
+  const inp = document.getElementById('fileInput');
+  inp.onchange = e => handleFile(e.target.files[0]);
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragging'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragging'));
+  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragging'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+}
+function setUploadStatus(msg) { document.getElementById('uploadStatus').textContent = msg; }
+async function handleFile(file) {
+  if (!file) return;
+  setUploadStatus(`Reading "${file.name}" (${(file.size/1024).toFixed(0)} KB)…`);
+  const text = await file.text();
+  let rows = [];
+  const isHtml = /<table|<tr|<td/i.test(text.slice(0, 4000));
+  try { rows = isHtml ? parseHtmlTable(text) : parseCsv(text); }
+  catch (e) { setUploadStatus('❌ Parse failed: ' + e.message); return; }
+  if (rows.length === 0) return setUploadStatus('❌ No rows found in file.');
+  setUploadStatus(`Parsed ${rows.length.toLocaleString()} rows. Aggregating…`);
+  state.parsed = aggregate(rows);
+  showPreview(state.parsed, file.name);
+}
+function parseCsv(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+  if (lines.length === 0) return [];
+  const split = (l) => {
+    const out=[]; let cur='', q=false;
+    for (const c of l) {
+      if (c === '"') { q=!q; continue; }
+      if (c === ',' && !q) { out.push(cur); cur=''; } else cur += c;
+    }
+    out.push(cur); return out;
+  };
+  const hdr = split(lines[0]).map(h => h.trim());
+  const rows = [];
+  for (let i=1; i<lines.length; i++) {
+    const c = split(lines[i]);
+    if (c.length < hdr.length) continue;
+    const o={}; for (let j=0;j<hdr.length;j++) o[hdr[j]] = c[j];
+    rows.push(o);
+  }
+  return rows;
+}
+function parseHtmlTable(text) {
+  const doc = new DOMParser().parseFromString(text, 'text/html');
+  const tbl = doc.querySelector('table'); if (!tbl) throw new Error('No <table> found.');
+  const trs = tbl.querySelectorAll('tr'); if (trs.length < 2) throw new Error('Table empty.');
+  const hdr = Array.from(trs[0].querySelectorAll('th,td')).map(c => c.textContent.trim());
+  const rows = [];
+  for (let i=1; i<trs.length; i++) {
+    const cells = Array.from(trs[i].querySelectorAll('th,td')).map(c => c.textContent.trim());
+    if (cells.length < hdr.length) continue;
+    const o={}; for (let j=0;j<hdr.length;j++) o[hdr[j]] = cells[j];
+    rows.push(o);
+  }
+  return rows;
+}
+function getH(row, ...cands) {
+  for (const c of cands) if (row[c] !== undefined) return row[c];
+  const ks = Object.keys(row);
+  for (const c of cands) { const k = ks.find(k => k.toLowerCase() === c.toLowerCase()); if (k) return row[k]; }
+  return undefined;
+}
+function aggregate(rows) {
+  const shops = {};
+  for (const r of rows) {
+    const channel = String(getH(r,'Channel') || '').trim().toUpperCase();
+    if (channel !== 'RTL') continue;
+    const id = String(getH(r,'Retailer Compcode','RtrCompCode','Retailer Code') || '').trim();
+    if (!id) continue;
+    const name = String(getH(r,'Retailer Name','RetailerName') || '').trim();
+    let ssm = String(getH(r,'Salesman','SSM Name','SSMName') || '').trim();
+    if (ssm.includes('-')) ssm = ssm.split('-')[0].trim();
+    const brand = String(getH(r,'Brand','BrandName') || '').trim();
+    const lm  = parseFloat(getH(r,'LM','LM Qty')  || 0) || 0;
+    const mtd = parseFloat(getH(r,'MTD','MTD Qty')|| 0) || 0;
+    if (!shops[id]) shops[id] = { id, name, ssm, brands_lm:{}, brands_mtd_baseline:{}, real1l_lm: 0 };
+    if (brand === 'Real 1 Ltr') shops[id].real1l_lm += lm;
+    const fb = brandToFocus[brand];
+    if (fb) {
+      shops[id].brands_lm[fb] = (shops[id].brands_lm[fb]||0) + lm;
+      shops[id].brands_mtd_baseline[fb] = (shops[id].brands_mtd_baseline[fb]||0) + mtd;
+    }
+  }
+  const out = Object.values(shops).map(s => {
+    const served_lm = Object.values(s.brands_lm).some(v => v > 0);
+    const served_mtd_baseline = Object.values(s.brands_mtd_baseline).some(v => v > 0);
+    return { ...s, served_lm, served_mtd_baseline };
+  });
+  return {
+    shops: out,
+    dormant:  out.filter(s => !s.served_lm && !s.served_mtd_baseline).length,
+    slipping: out.filter(s =>  s.served_lm && !s.served_mtd_baseline).length,
+    served:   out.filter(s =>  s.served_mtd_baseline).length,
+  };
+}
+function showPreview(agg, name) {
+  document.getElementById('preview').style.display = 'block';
+  document.getElementById('previewSummary').innerHTML = `
+    <div class="stat"><div class="label">RTL outlets parsed</div><div class="value">${fmtN(agg.shops.length)}</div></div>
+    <div class="stat red"><div class="label">🔥 Dormant</div><div class="value">${fmtN(agg.dormant)}</div></div>
+    <div class="stat"><div class="label">⚠ Slipping</div><div class="value">${fmtN(agg.slipping)}</div></div>
+    <div class="stat green"><div class="label">✓ Already served MTD</div><div class="value">${fmtN(agg.served)}</div></div>`;
+  setUploadStatus(`✓ Parsed "${name}". Review numbers above and commit.`);
+}
+function cancelUpload() {
+  state.parsed = null; document.getElementById('fileInput').value=''; document.getElementById('preview').style.display='none'; setUploadStatus('No file selected.');
+}
+async function commitUpload() {
+  if (!state.parsed) return;
+  const existing = {};
+  const snap = await db.collection('shops').get();
+  snap.forEach(d => existing[d.id] = d.data());
+  const batches = [db.batch()]; let n=0; let bi=0;
+  for (const sh of state.parsed.shops) {
+    const ex = existing[sh.id] || {};
+    const merged = {
+      ...ex,
+      id: sh.id, name: sh.name || ex.name, ssm: sh.ssm || ex.ssm,
+      beat_code: ex.beat_code || 'UNASSIGNED',
+      beat_name: ex.beat_name || 'Unassigned',
+      real1l_lm: sh.real1l_lm || 0,
+      brands_lm: sh.brands_lm,
+      brands_mtd_baseline: sh.brands_mtd_baseline,
+      brands_mtd_now: { ...sh.brands_mtd_baseline },
+      served_lm: sh.served_lm,
+      served_mtd_baseline: sh.served_mtd_baseline,
+      served_mtd_now: sh.served_mtd_baseline,
+      updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    batches[bi].set(db.collection('shops').doc(sh.id), merged, { merge: true });
+    n++; if (n%450===0) { bi++; batches.push(db.batch()); }
+  }
+  for (const b of batches) await b.commit();
+  await db.collection('uploads').add({
+    count: state.parsed.shops.length, dormant: state.parsed.dormant, slipping: state.parsed.slipping, served: state.parsed.served,
+    uploaded_at: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  toast(`✓ Committed ${state.parsed.shops.length} shops`, 'success', 4000);
+  cancelUpload();
+}
+
+/* ===========================================================
+   BOOT
+   =========================================================== */
+async function boot() {
+  if (!initFb()) return;
+  try {
+    await auth.signInAnonymously();
+    setCloud('☁️ Connected', 'ok');
+  } catch (e) {
+    setCloud('☁️ Auth failed', 'err');
+    showError('Anonymous Auth failed. Enable it in Firebase Console → Authentication → Sign-in method → Anonymous.');
+  }
+  state.session = getSession();
+  updateHeader();
+  if (state.session && state.session.role) {
+    await routeAfterLogin();
+  } else {
+    showView('view-pick');
+    await loadSsmDropdown();
+  }
+  setupUpload();
+
+  // Enter key submits
+  document.getElementById('ssmPin').addEventListener('keydown', e => { if (e.key==='Enter') loginSSM(); });
+  document.getElementById('adminPw').addEventListener('keydown', e => { if (e.key==='Enter') loginAdmin(); });
+}
+boot();
+</script>
+</body>
+</html>
